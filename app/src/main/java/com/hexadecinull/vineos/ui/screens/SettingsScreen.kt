@@ -14,7 +14,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.hexadecinull.vineos.BuildConfig
 
-// ─── Settings Screen ──────────────────────────────────────────────────────────
 
 data class AppSettings(
     val dynamicColor: Boolean = true,
@@ -50,9 +49,7 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 24.dp)
         ) {
-            // ── Appearance ────────────────────────────────────────────────────
             SettingsSection(title = "Appearance") {
-                // Dynamic color is only meaningful on Android 12+
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     SwitchSettingsItem(
                         icon = Icons.Outlined.Palette,
@@ -64,7 +61,6 @@ fun SettingsScreen(
                 }
             }
 
-            // ── VM Defaults ───────────────────────────────────────────────────
             SettingsSection(title = "VM Defaults") {
                 SliderSettingsItem(
                     icon = Icons.Outlined.Memory,
@@ -84,7 +80,6 @@ fun SettingsScreen(
                 )
             }
 
-            // ── Advanced ──────────────────────────────────────────────────────
             SettingsSection(title = "Advanced") {
                 SwitchSettingsItem(
                     icon = Icons.Outlined.Code,
@@ -102,7 +97,6 @@ fun SettingsScreen(
                 )
             }
 
-            // ── About ─────────────────────────────────────────────────────────
             SettingsSection(title = "About") {
                 InfoSettingsItem(
                     icon = Icons.Outlined.Info,
@@ -124,7 +118,6 @@ fun SettingsScreen(
     }
 }
 
-// ─── Settings building blocks ─────────────────────────────────────────────────
 
 @Composable
 fun SettingsSection(

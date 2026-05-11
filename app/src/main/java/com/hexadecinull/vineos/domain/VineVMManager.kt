@@ -2,7 +2,10 @@ package com.hexadecinull.vineos.domain
 
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import androidx.core.content.ContextCompat
+import com.hexadecinull.vineos.data.models.AbiCompat
+import com.hexadecinull.vineos.data.models.ROMImage
 import com.hexadecinull.vineos.data.models.VMInstance
 import com.hexadecinull.vineos.data.models.VMStatus
 import com.hexadecinull.vineos.data.repository.InstanceRepository
@@ -30,6 +33,7 @@ class VineVMManager @Inject constructor(
     private val handles = mutableMapOf<String, Long>()
     private val statusFlows = mutableMapOf<String, MutableStateFlow<VMStatus>>()
 
+    val hostAbis: List<String> = Build.SUPPORTED_ABIS.toList()
     val hostSupports32bit: Boolean by lazy { VineRuntime.hostSupportsAArch32() }
 
     init {
@@ -38,6 +42,9 @@ class VineVMManager @Inject constructor(
             context.applicationInfo.nativeLibraryDir,
         )
     }
+
+    fun isRomCompatible(rom: ROMImage): Boolean =
+        AbiCompat.romRunMode(rom, hostAbis) != AbiCompat.RunMode.UNAVAILABLE
 
     fun statusFlow(instanceId: String): StateFlow<VMStatus> =
         statusFlows.getOrPut(instanceId) { MutableStateFlow(VMStatus.STOPPED) }.asStateFlow()

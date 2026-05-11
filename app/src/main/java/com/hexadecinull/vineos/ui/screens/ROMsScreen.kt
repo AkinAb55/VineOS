@@ -1,5 +1,6 @@
 package com.hexadecinull.vineos.ui.screens
 
+import android.os.Build
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -7,7 +8,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,16 +15,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.hexadecinull.vineos.data.models.AbiCompat
 import com.hexadecinull.vineos.data.models.DownloadProgress
 import com.hexadecinull.vineos.data.models.ROMDownloadState
 import com.hexadecinull.vineos.data.models.ROMImage
 
-// ─── ROMs Screen ──────────────────────────────────────────────────────────────
-
-/**
- * Shows available ROM images with download status.
- * ROMs are fetched from VineOS's remote manifest.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ROMsScreen(
@@ -36,6 +31,8 @@ fun ROMsScreen(
     isLoading: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val hostAbis = remember { Build.SUPPORTED_ABIS.toList() }
+
     Scaffold(
         topBar = {
             LargeTopAppBar(
@@ -55,9 +52,7 @@ fun ROMsScreen(
         }
 
         if (roms.isEmpty()) {
-            ROMsEmptyState(
-                modifier = Modifier.fillMaxSize().padding(innerPadding)
-            )
+            ROMsEmptyState(modifier = Modifier.fillMaxSize().padding(innerPadding))
             return@Scaffold
         }
 
@@ -77,6 +72,7 @@ fun ROMsScreen(
             items(roms, key = { it.id }) { rom ->
                 ROMCard(
                     rom = rom,
+                    hostAbis = hostAbis,
                     progress = downloadProgress[rom.id],
                     onDownload = { onDownloadROM(rom) },
                     onDelete = { onDeleteROM(rom) },
@@ -87,30 +83,35 @@ fun ROMsScreen(
     }
 }
 
-// ─── ROM Card ─────────────────────────────────────────────────────────────────
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ROMCard(
     rom: ROMImage,
+    hostAbis: List<String>,
     progress: DownloadProgress?,
     onDownload: () -> Unit,
     onDelete: () -> Unit,
     onClick: () -> Unit,
 ) {
+    val runMode = remember(rom.id, hostAbis) { AbiCompat.romRunMode(rom, hostAbis) }
+    val unavailable = runMode == AbiCompat.RunMode.UNAVAILABLE
+
     ElevatedCard(
         onClick = onClick,
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+        enabled = !unavailable,
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Android version number badge
                 Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
+                    color = if (unavailable)
+                        MaterialTheme.colorScheme.surfaceVariant
+                    else
+                        MaterialTheme.colorScheme.primaryContainer,
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.size(52.dp)
                 ) {
@@ -119,7 +120,10 @@ private fun ROMCard(
                             text = rom.apiLevel.toString(),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                            color = if (unavailable)
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            else
+                                MaterialTheme.colorScheme.onPrimaryContainer,
                         )
                     }
                 }
@@ -128,7 +132,10 @@ private fun ROMCard(
                     Text(
                         text = rom.displayName,
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = if (unavailable)
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                        else
+                            MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
                         text = "Android ${rom.androidVersion} · API ${rom.apiLevel}",
@@ -137,16 +144,18 @@ private fun ROMCard(
                     )
                     Spacer(Modifier.height(4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        if (rom.has32BitSupport) {
-                            ROMFeatureChip(label = "32-bit")
-                        }
-                        ROMFeatureChip(label = "arm64")
+                        rom.supportedAbis.forEach { abi -> ROMFeatureChip(label = abi) }
                         ROMSizeChip(bytes = rom.sizeBytes)
+                        when (runMode) {
+                            AbiCompat.RunMode.QEMU        -> ROMQemuChip()
+                            AbiCompat.RunMode.UNAVAILABLE -> ROMUnavailableChip()
+                            else                          -> {}
+                        }
                     }
                 }
 
-                // Action button
                 when {
+                    unavailable -> {}
                     rom.isDownloaded -> {
                         FilledTonalIconButton(onClick = {}) {
                             Icon(
@@ -156,19 +165,15 @@ private fun ROMCard(
                             )
                         }
                     }
-                    progress?.state == ROMDownloadState.DOWNLOADING -> { /* shown below */ }
+                    progress?.state == ROMDownloadState.DOWNLOADING -> {}
                     else -> {
                         FilledTonalIconButton(onClick = onDownload) {
-                            Icon(
-                                Icons.Filled.Download,
-                                contentDescription = "Download ${rom.displayName}"
-                            )
+                            Icon(Icons.Filled.Download, contentDescription = "Download ${rom.displayName}")
                         }
                     }
                 }
             }
 
-            // Download progress bar
             if (progress != null && progress.state == ROMDownloadState.DOWNLOADING) {
                 Spacer(Modifier.height(10.dp))
                 Column {
@@ -198,8 +203,6 @@ private fun ROMCard(
     }
 }
 
-// ─── Chips ────────────────────────────────────────────────────────────────────
-
 @Composable
 private fun ROMFeatureChip(label: String) {
     Surface(
@@ -219,8 +222,8 @@ private fun ROMFeatureChip(label: String) {
 private fun ROMSizeChip(bytes: Long) {
     val label = when {
         bytes >= 1_073_741_824L -> "%.1f GB".format(bytes / 1_073_741_824.0)
-        bytes >= 1_048_576L -> "%.0f MB".format(bytes / 1_048_576.0)
-        else -> "$bytes B"
+        bytes >= 1_048_576L     -> "%.0f MB".format(bytes / 1_048_576.0)
+        else                    -> "$bytes B"
     }
     Surface(
         color = MaterialTheme.colorScheme.surfaceVariant,
@@ -235,7 +238,35 @@ private fun ROMSizeChip(bytes: Long) {
     }
 }
 
-// ─── Empty State ──────────────────────────────────────────────────────────────
+@Composable
+private fun ROMQemuChip() {
+    Surface(
+        color = MaterialTheme.colorScheme.tertiaryContainer,
+        shape = RoundedCornerShape(6.dp)
+    ) {
+        Text(
+            text = "QEMU",
+            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onTertiaryContainer,
+        )
+    }
+}
+
+@Composable
+private fun ROMUnavailableChip() {
+    Surface(
+        color = MaterialTheme.colorScheme.errorContainer,
+        shape = RoundedCornerShape(6.dp)
+    ) {
+        Text(
+            text = "Incompatible",
+            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onErrorContainer,
+        )
+    }
+}
 
 @Composable
 private fun ROMsEmptyState(modifier: Modifier = Modifier) {

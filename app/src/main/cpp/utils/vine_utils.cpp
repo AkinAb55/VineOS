@@ -123,7 +123,7 @@ bool terminate_gracefully(pid_t pid, int timeout_ms) {
 //   L2: ro.product.cpu.abilist   — contains "armeabi" only if CPU supports AArch32
 //   L3: /proc/sys/abi/           — kernel compat knobs only exist when CONFIG_COMPAT=y
 //   L4: /proc/cpuinfo aarch32_el0 — CPU feature flag, present on Linux 4.7+ with AArch32
-// If all four return negative, the device is arm64-only and QEMU mode is activated.
+// If all four are negative the device is arm64-only and QEMU mode is required.
 bool host_supports_aarch32() {
     char buf[PROP_VALUE_MAX] = {};
 

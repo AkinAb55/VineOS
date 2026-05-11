@@ -25,9 +25,6 @@ import com.hexadecinull.vineos.data.models.VMInstance
 import com.hexadecinull.vineos.data.models.VMStatus
 import com.hexadecinull.vineos.ui.theme.*
 
-/**
- * Main card displayed in the Instances list for each VMInstance.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InstanceCard(
@@ -59,7 +56,6 @@ fun InstanceCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Instance emoji icon + status dot
             Box(contentAlignment = Alignment.BottomEnd) {
                 Box(
                     modifier = Modifier
@@ -68,12 +64,8 @@ fun InstanceCard(
                         .background(MaterialTheme.colorScheme.secondaryContainer),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = instance.iconEmoji,
-                        fontSize = 26.sp
-                    )
+                    Text(text = instance.iconEmoji, fontSize = 26.sp)
                 }
-                // Status indicator dot
                 Box(
                     modifier = Modifier
                         .size(14.dp)
@@ -90,7 +82,6 @@ fun InstanceCard(
                 }
             }
 
-            // Instance info
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(3.dp)
@@ -110,17 +101,11 @@ fun InstanceCard(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Status badge
                     StatusChip(status = instance.status, color = statusColor)
-
-                    // Rooted indicator
-                    if (instance.isRooted) {
-                        SuChip()
-                    }
+                    if (instance.isRooted) SuChip()
                 }
             }
 
-            // Action buttons
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -161,7 +146,6 @@ fun InstanceCard(
                     else -> Spacer(Modifier.size(40.dp))
                 }
 
-                // Overflow menu
                 Box {
                     IconButton(
                         onClick = { showMenu = true },
@@ -174,28 +158,14 @@ fun InstanceCard(
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
+                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                         DropdownMenuItem(
                             text = { Text("View Details") },
-                            onClick = {
-                                showMenu = false
-                                onCardClick(instance)
-                            }
+                            onClick = { showMenu = false; onCardClick(instance) }
                         )
                         DropdownMenuItem(
-                            text = {
-                                Text(
-                                    "Delete",
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                            },
-                            onClick = {
-                                showMenu = false
-                                onDeleteClick(instance)
-                            },
+                            text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                            onClick = { showMenu = false; onDeleteClick(instance) },
                             enabled = instance.status == VMStatus.STOPPED
                         )
                     }
@@ -205,14 +175,9 @@ fun InstanceCard(
     }
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
 @Composable
 private fun StatusChip(status: VMStatus, color: Color) {
-    Surface(
-        color = color.copy(alpha = 0.15f),
-        shape = RoundedCornerShape(6.dp)
-    ) {
+    Surface(color = color.copy(alpha = 0.15f), shape = RoundedCornerShape(6.dp)) {
         Text(
             text = status.displayName(),
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
@@ -225,10 +190,7 @@ private fun StatusChip(status: VMStatus, color: Color) {
 
 @Composable
 private fun SuChip() {
-    Surface(
-        color = MaterialTheme.colorScheme.tertiaryContainer,
-        shape = RoundedCornerShape(6.dp)
-    ) {
+    Surface(color = MaterialTheme.colorScheme.tertiaryContainer, shape = RoundedCornerShape(6.dp)) {
         Text(
             text = "SU",
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
@@ -239,8 +201,6 @@ private fun SuChip() {
         )
     }
 }
-
-// ─── Extensions ───────────────────────────────────────────────────────────────
 
 fun VMStatus.toColor(): Color = when (this) {
     VMStatus.RUNNING -> VineStatusRunning

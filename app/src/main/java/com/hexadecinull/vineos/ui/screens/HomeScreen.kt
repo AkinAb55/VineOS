@@ -16,12 +16,6 @@ import androidx.compose.ui.unit.dp
 import com.hexadecinull.vineos.data.models.VMInstance
 import com.hexadecinull.vineos.ui.components.InstanceCard
 
-// ─── Home Screen ──────────────────────────────────────────────────────────────
-
-/**
- * Main screen listing all VM instances.
- * Shows an empty state with instructions when no instances exist.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -46,9 +40,7 @@ fun HomeScreen(
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = onCreateInstance,
-                icon = {
-                    Icon(Icons.Filled.Add, contentDescription = null)
-                },
+                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
                 text = { Text("New Instance") },
             )
         },
@@ -62,27 +54,20 @@ fun HomeScreen(
             if (isEmpty) {
                 HomeEmptyState(
                     onCreateInstance = onCreateInstance,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
+                    modifier = Modifier.fillMaxSize().padding(innerPadding)
                 )
             } else {
                 LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
+                    modifier = Modifier.fillMaxSize().padding(innerPadding),
                     contentPadding = PaddingValues(
                         start = 16.dp,
                         end = 16.dp,
                         top = 8.dp,
-                        bottom = 88.dp  // FAB clearance
+                        bottom = 88.dp
                     ),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(
-                        items = instances,
-                        key = { it.id }
-                    ) { instance ->
+                    items(items = instances, key = { it.id }) { instance ->
                         InstanceCard(
                             instance = instance,
                             onLaunchClick = onLaunchInstance,
@@ -96,8 +81,6 @@ fun HomeScreen(
         }
     }
 }
-
-// ─── Empty State ──────────────────────────────────────────────────────────────
 
 @Composable
 private fun HomeEmptyState(

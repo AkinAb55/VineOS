@@ -7,13 +7,9 @@ object VineRuntime {
         System.loadLibrary("vine_runtime")
     }
 
-    // ── Lifecycle ─────────────────────────────────────────────────────────────
-
     external fun initialize(dataDir: String, nativeLibDir: String): Boolean
 
     external fun shutdown()
-
-    // ── Instance management ───────────────────────────────────────────────────
 
     external fun createInstance(
         instanceId: String,
@@ -35,50 +31,27 @@ object VineRuntime {
 
     external fun deleteInstance(instanceId: String, instancePath: String): Boolean
 
-    // ── 32-bit / QEMU ─────────────────────────────────────────────────────────
-
     external fun hostSupportsAArch32(): Boolean
 
     external fun registerQemuBinfmt(instanceHandle: Long, qemuArmPath: String): Boolean
 
-    // ── Display ───────────────────────────────────────────────────────────────
-
-    /**
-     * Returns the file descriptor of the guest's virtual framebuffer device.
-     * -1 if the framebuffer is not yet open.
-     */
+    // Returns -1 if the framebuffer is not yet open.
     external fun getFramebufferFd(instanceHandle: Long): Int
 
-    /**
-     * Attach an Android Surface to the framebuffer bridge so the native render
-     * loop can blit guest frames into it. Call after the SurfaceView is ready.
-     */
+    // Attach an Android Surface to receive guest frames. Call after SurfaceView is ready.
     external fun attachSurface(instanceHandle: Long, surface: Surface)
 
-    /**
-     * Detach the Surface (e.g. when the SurfaceView is destroyed). Stops the
-     * render loop and releases the ANativeWindow reference.
-     */
+    // Detach the Surface (e.g. when the SurfaceView is destroyed).
     external fun detachSurface(instanceHandle: Long)
 
-    /**
-     * Start the 60fps render loop for this instance. Requires a Surface to have
-     * been attached via attachSurface() first.
-     */
+    // Start the render loop. Requires attachSurface() to have been called first.
     external fun startRendering(instanceHandle: Long): Boolean
 
-    /**
-     * Stop the render loop (e.g. when the user minimizes the VM display).
-     */
     external fun stopRendering(instanceHandle: Long)
-
-    // ── Input ─────────────────────────────────────────────────────────────────
 
     external fun sendTouchEvent(instanceHandle: Long, action: Int, x: Float, y: Float)
 
     external fun sendKeyEvent(instanceHandle: Long, keycode: Int, down: Boolean)
-
-    // ── Diagnostics ───────────────────────────────────────────────────────────
 
     external fun getDiagnostics(instanceHandle: Long): String
 
