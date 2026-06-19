@@ -226,4 +226,19 @@ bool FramebufferBridge::start_render_loop() {
             }
         }
 
-        VINE_LOGI("FramebufferBridge[%s]: render loop stopped
+        VINE_LOGI("FramebufferBridge[%s]: render loop stopped", instance_id_.c_str());
+    });
+
+    return true;
+}
+
+void FramebufferBridge::stop_render_loop() {
+    if (!rendering_.load()) return;
+    rendering_.store(false);
+    if (render_thread_.joinable()) {
+        render_thread_.join();
+    }
+    VINE_LOGI("FramebufferBridge[%s]: render loop stopped", instance_id_.c_str());
+}
+
+} // namespace vine::display
