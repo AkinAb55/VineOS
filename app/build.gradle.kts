@@ -11,12 +11,12 @@ plugins {
 
 android {
     namespace = "com.hexadecinull.vineos"
-    compileSdk = 36
+    compileSdk = 31   // Android 12
 
     defaultConfig {
         applicationId = "com.hexadecinull.vineos"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 31 // Android 12
         versionCode = 1
         versionName = "0.1.0-alpha"
 
@@ -37,7 +37,6 @@ android {
         }
     }
 
-    // Игнорируем фатальные ошибки Lint при сборке релиза
     lint {
         checkReleaseBuilds = false
         abortOnError = false
@@ -47,7 +46,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            
+
             val proguardFile = file("proguard-rules.pro")
             if (proguardFile.exists()) {
                 proguardFiles(
