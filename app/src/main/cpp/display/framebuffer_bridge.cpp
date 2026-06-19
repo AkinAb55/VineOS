@@ -63,7 +63,6 @@ void FramebufferBridge::set_surface(ANativeWindow* window) {
     window_ = window;
     if (window_) {
         ANativeWindow_acquire(window_);
-        // AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM = 1
         ANativeWindow_setBuffersGeometry(window_, guest_width_, guest_height_, 1);
         VINE_LOGI("FramebufferBridge[%s]: surface attached %dx%d",
                   instance_id_.c_str(), guest_width_, guest_height_);
@@ -78,7 +77,6 @@ bool FramebufferBridge::query_fb_geometry() {
 
     if (ioctl(fb_fd_, FBIOGET_VSCREENINFO, &vinfo) != 0) {
         VINE_LOGE_ERRNO("FBIOGET_VSCREENINFO");
-        // Fall back to ranchu defaults (1080x1920 RGBA_8888)
         guest_width_  = 1080;
         guest_height_ = 1920;
         guest_stride_ = guest_width_ * 4;
@@ -98,11 +96,9 @@ bool FramebufferBridge::query_fb_geometry() {
     guest_stride_ = (int)finfo.line_length;
     frame_size_   = (size_t)finfo.smem_len;
 
-    // Determine pixel format from bits_per_pixel and channel offsets
     if (vinfo.bits_per_pixel == 16) {
         format_ = FrameFormat::RGB_565;
     } else if (vinfo.bits_per_pixel == 32) {
-        // Distinguish RGBA vs BGRA by red channel offset
         if (vinfo.red.offset == 0) {
             format_ = FrameFormat::RGBA_8888;
         } else {
@@ -159,41 +155,38 @@ bool FramebufferBridge::blit_to_window() {
 
     const uint8_t* src = static_cast<const uint8_t*>(fb_mmap_);
     uint8_t* dst = static_cast<uint8_t*>(buffer.bits);
-    const int dst_stride_bytes = buffer.stride * 4; // ANativeWindow stride is in pixels
+    const int dst_stride_bytes = buffer.stride * 4;
 
     if (format_ == FrameFormat::RGB_565) {
-        // Convert RGB565 → RGBA8888 row by row
         for (int y = 0; y < guest_height_ && y < buffer.height; ++y) {
             convert_rgb565_to_rgba8888(
                 src + y * guest_stride_,
                 dst + y * dst_stride_bytes,
                 std::min(guest_width_, buffer.width),
                 1,
-                guest_stride_   // исправлено: убрана лишняя запятая
+                guest_stride_
             );
         }
     } else if (format_ == FrameFormat::BGRA_8888) {
-        // Swap B and R channels (BGRA → RGBA)
         for (int y = 0; y < guest_height_ && y < buffer.height; ++y) {
             const uint32_t* s = reinterpret_cast<const uint32_t*>(src + y * guest_stride_);
             uint32_t* d = reinterpret_cast<uint32_t*>(dst + y * dst_stride_bytes);
             const int w = std::min(guest_width_, buffer.width);
             for (int x = 0; x < w; ++x) {
                 uint32_t px = s[x];
-                d[x] = ((px & 0x000000FF) << 16) | // B → R
-                       ( px & 0x0000FF00)         | // G stays
-                       ((px & 0x00FF0000) >> 16)  | // R → B
-                       ( px & 0xFF000000);           // A stays
+                d[x] = ((px & 0x000000FF) << 16) |
+                       ( px & 0x0000FF00) |
+                       ((px & 0x00FF0000) >> 16) |
+                       ( px & 0xFF000000);
             }
         }
     } else {
-        // RGBA_8888: direct row copy (handling stride differences)
         const int copy_bytes = std::min(guest_width_, buffer.width) * 4;
         for (int y = 0; y < guest_height_ && y < buffer.height; ++y) {
             memcpy(
                 dst + y * dst_stride_bytes,
                 src + y * guest_stride_,
-                copy_bytes   // исправлено: убрана лишняя запятая
+                copy_bytes
             );
         }
     }
@@ -215,4 +208,22 @@ bool FramebufferBridge::start_render_loop() {
     render_thread_ = std::thread([this]() {
         VINE_LOGI("FramebufferBridge[%s]: render loop started", instance_id_.c_str());
 
-        constexpr int TARGET_FRAME_US = 
+        constexpr int TARGET_FRAME_US = 16667; // 1s / 60fps in microseconds
+
+        while (rendering_.load()) {
+            auto frame_start = std::chrono::steady_clock::now();
+
+            if (window_ && fb_mmap_) {
+                blit_to_window();
+            }
+
+            auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now() - frame_start
+            ).count();
+
+            if (elapsed < TARGET_FRAME_US) {
+                usleep((useconds_t)(TARGET_FRAME_US - elapsed));
+            }
+        }
+
+        VINE_LOGI("FramebufferBridge[%s]: render loop stopped
