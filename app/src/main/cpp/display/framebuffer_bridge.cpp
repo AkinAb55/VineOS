@@ -241,4 +241,32 @@ void FramebufferBridge::stop_render_loop() {
     VINE_LOGI("FramebufferBridge[%s]: render loop stopped", instance_id_.c_str());
 }
 
+// ─── Pixel Conversion ─────────────────────────────────────────────────────────
+
+void FramebufferBridge::convert_rgb565_to_rgba8888(
+    const void* src, void* dst,
+    int width, int height, int src_stride) 
+{
+    const uint8_t* src_bytes = static_cast<const uint8_t*>(src);
+    uint8_t* dst_bytes = static_cast<uint8_t*>(dst);
+
+    for (int y = 0; y < height; ++y) {
+        const uint16_t* src_pixel = reinterpret_cast<const uint16_t*>(src_bytes + y * src_stride);
+        uint32_t* dst_pixel = reinterpret_cast<uint32_t*>(dst_bytes + y * width * 4);
+
+        for (int x = 0; x < width; ++x) {
+            uint16_t rgb565 = src_pixel[x];
+            
+            // Извлекаем каналы: 5 бит R, 6 бит G, 5 бит B и масштабируем их до 8 бит
+            uint8_t r = ((rgb565 >> 11) & 0x1F) << 3;
+            uint8_t g = ((rgb565 >> 5)  & 0x3F) << 2;
+            uint8_t b = (rgb565         & 0x1F) << 3;
+            uint8_t a = 0xFF; // Полная непрозрачность альфа-канала
+
+            // Собираем пиксель в структуру RGBA_8888
+            dst_pixel[x] = (a << 24) | (b << 16) | (g << 8) | r;
+        }
+    }
+}
+
 } // namespace vine::display
