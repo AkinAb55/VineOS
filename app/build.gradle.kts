@@ -11,7 +11,7 @@ plugins {
 
 android {
     namespace = "com.hexadecinull.vineos"
-    compileSdk = 34   // удовлетворяет требованиям зависимостей
+    compileSdk = 35   // удовлетворяет требованиям androidx.core
 
     defaultConfig {
         applicationId = "com.hexadecinull.vineos"
