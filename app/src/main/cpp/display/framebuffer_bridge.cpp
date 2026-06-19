@@ -169,7 +169,7 @@ bool FramebufferBridge::blit_to_window() {
                 dst + y * dst_stride_bytes,
                 std::min(guest_width_, buffer.width),
                 1,
-                guest_stride_,
+                guest_stride_   // исправлено: убрана лишняя запятая
             );
         }
     } else if (format_ == FrameFormat::BGRA_8888) {
@@ -180,8 +180,6 @@ bool FramebufferBridge::blit_to_window() {
             const int w = std::min(guest_width_, buffer.width);
             for (int x = 0; x < w; ++x) {
                 uint32_t px = s[x];
-                // BGRA: B=bits[0..7] G=bits[8..15] R=bits[16..23] A=bits[24..31]
-                // RGBA: R=bits[0..7] G=bits[8..15] B=bits[16..23] A=bits[24..31]
                 d[x] = ((px & 0x000000FF) << 16) | // B → R
                        ( px & 0x0000FF00)         | // G stays
                        ((px & 0x00FF0000) >> 16)  | // R → B
@@ -195,7 +193,7 @@ bool FramebufferBridge::blit_to_window() {
             memcpy(
                 dst + y * dst_stride_bytes,
                 src + y * guest_stride_,
-                copy_bytes,
+                copy_bytes   // исправлено: убрана лишняя запятая
             );
         }
     }
@@ -217,54 +215,4 @@ bool FramebufferBridge::start_render_loop() {
     render_thread_ = std::thread([this]() {
         VINE_LOGI("FramebufferBridge[%s]: render loop started", instance_id_.c_str());
 
-        // Target ~60fps. We use a simple sleep-based loop for Phase 2.
-        // Phase 3 TODO: sync to Choreographer vsync via AChoreographer API.
-        constexpr int TARGET_FRAME_US = 16667; // 1s / 60fps in microseconds
-
-        while (rendering_.load()) {
-            auto frame_start = std::chrono::steady_clock::now();
-
-            if (window_ && fb_mmap_) {
-                blit_to_window();
-            }
-
-            auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
-                std::chrono::steady_clock::now() - frame_start
-            ).count();
-
-            if (elapsed < TARGET_FRAME_US) {
-                usleep((useconds_t)(TARGET_FRAME_US - elapsed));
-            }
-        }
-
-        VINE_LOGI("FramebufferBridge[%s]: render loop stopped", instance_id_.c_str());
-    });
-
-    return true;
-}
-
-void FramebufferBridge::stop_render_loop() {
-    if (!rendering_.load()) return;
-    rendering_.store(false);
-    if (render_thread_.joinable()) render_thread_.join();
-}
-
-// ─── RGB565 → RGBA8888 ────────────────────────────────────────────────────────
-
-void FramebufferBridge::convert_rgb565_to_rgba8888(
-        const void* src, void* dst, int width, int height, int src_stride) {
-    const uint16_t* s = static_cast<const uint16_t*>(src);
-    uint32_t* d = static_cast<uint32_t*>(dst);
-    const int src_row_pixels = src_stride / 2;
-    for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
-            uint16_t px = s[y * src_row_pixels + x];
-            uint8_t r = (px >> 11) & 0x1F; r = (r << 3) | (r >> 2);
-            uint8_t g = (px >>  5) & 0x3F; g = (g << 2) | (g >> 4);
-            uint8_t b =  px        & 0x1F; b = (b << 3) | (b >> 2);
-            d[y * width + x] = (0xFF << 24) | (r << 16) | (g << 8) | b;
-        }
-    }
-}
-
-} // namespace vine::display
+        constexpr int TARGET_FRAME_US = 
